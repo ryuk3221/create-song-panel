@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <title>Создание карты</title>
+</head>
+<body>
+  <audio class="audio-pop" src="sounds/drum-hitnormal.mp3"></audio>
+
+  <!-- редактируемый трек -->
+  <audio class="music" src="sounds/Mirabi_Frame_feat._Yui_Katsuragi_-_Shokuzai_(SkySound.cc).mp3"></audio>
+
+  <div class="wrapper" style="background: #fff;">
+    
+    <div class="panel-frame">
+      <div class="canvas-wrapper1" style="width: 100%;">
+        <canvas 
+          class="timings-canvas" 
+          width="1000" 
+          height="100" 
+          style="background-color: #000; margin: 20px auto; display: block;"
+        >
+
+        </canvas>
+      </div>
+
+      <div class="show-current-notes">
+        <div class="show-current-notes__inner">
+          
+        </div>
+      </div>
+
+      <div class="music-controls">
+        <div class="music-current-time"></div>
+        <input class="input-music" type="range" value="0" min="0" max="1000">
+        <div class="music-btns">
+          <button id="playButton">▶️</button>
+          <button id="pauseButton">⏸️</button>
+          <button id="stopButton">⏹️</button>
+          <button class="btn-speed" id="0.25">0.25</button>
+          <button class="btn-speed" id="0.50">0.50</button>
+          <button class="btn-speed" id="0.75">0.75</button>
+          <button class="btn-speed btn-speed-active" id="1.00">1</button>
+          <button class="test-btn">Тест</button>
+          <button class="save-notes">Сохранить ноты</button>
+          <button class="autoplay">Просмотр карты</button>
+          <button class="delete-notes-from-current">Удалить ноты с текущего времени</button>
+        </div>
+      </div>
+      
+      <div class="generated-notes">
+        <div class="generated-notes__title">Настройки ноты</div>
+        <div class="note-settings-wrapper">
+
+        </div>
+        
+      </div>
+      
+    </div>
+
+  </div>
+
+  
+  <script src="create-map.js"></script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Timings widget</title>
+  <style>
+    .canvas-timings {
+      display: block;
+      margin: 20px 20px 20px 20px;
+      background-color: #000;
+    }
+
+    .buttons {
+      display: flex;
+      padding-top: 24px;
+      margin-left: 20px;
+      gap: 10px;
+    }
+
+    button {
+      font-size: 22px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <audio class="music" src="sounds/Mirabi_Frame_feat._Yui_Katsuragi_-_Shokuzai_(SkySound.cc).mp3"></audio>
+  <audio class="pop" src="sounds/drum-hitnormal.mp3"></audio>
+
+  <canvas class="canvas-timings" width="1200" height="100">
+
+  </canvas>
+  <div class="buttons">
+    <button class="play">play</button>
+    <button class="stop">stop</button>
+    <button class="speed-btn" id="0.50">0.50</button>
+    <button class="speed-btn" id="0.75">0.75</button>
+    <button class="speed-btn" id="1">1.00</button>
+  </div>
+
+  <script src="timings-widget.js">
+
+  </script>
+</body>
+</html>
