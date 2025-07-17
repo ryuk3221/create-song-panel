@@ -2021,7 +2021,7 @@ const ctx = canvas.getContext('2d');
 
 //-------
 let startTime = null;
-const timeWindow = 1500;
+const timeWindow = 274535;
 const appearBeforeHitTime = 1500;
 const speed = 0.7;
 
@@ -2117,7 +2117,7 @@ function sheduleTimingsInTimeWindow() {
                 const popTimeout = setTimeout(() => {
                     pop.currentTime = 0;
                     pop.play();
-                }, timeUntilHit - 20);
+                }, timeUntilHit);
                 popTimeouts.push(popTimeout);
             }
         }
@@ -2157,7 +2157,7 @@ function sheduleTimingsInTimeWindow() {
 
     // console.log(activeNotes);
 
-    sheduleId = setTimeout(() => sheduleTimingsInTimeWindow(), 500)
+    // sheduleId = setTimeout(() => sheduleTimingsInTimeWindow(), 500)
 }
 
 //-------ЗАПУСК
@@ -2263,3 +2263,15 @@ document.getElementById('1').onclick = (event) => {
     const id = event.target.id;
     audio.playbackRate = Number(id);
 }
+
+const audioProgress = document.querySelector('.audio-progress');
+
+audio.addEventListener('timeupdate', event => {
+    audioProgress.value = audio.currentTime / audio.duration * 1000;
+});
+
+audioProgress.addEventListener('input', event => {
+    audio.currentTime = audioProgress.value / 1000 * audio.duration;
+
+    //
+});
