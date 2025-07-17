@@ -2157,7 +2157,7 @@ function sheduleTimingsInTimeWindow() {
 
     // console.log(activeNotes);
 
-    // sheduleId = setTimeout(() => sheduleTimingsInTimeWindow(), 500)
+    // sheduleId = setTimeout(() => sheduleTimingsInTimeWindow(), 7000)
 }
 
 //-------ЗАПУСК
