@@ -2021,6 +2021,7 @@ const ctx = canvas.getContext('2d');
 
 //-------
 let startTime = null;
+let audioStartAt = 0;
 const timeWindow = 274535;
 const appearBeforeHitTime = 1500;
 const speed = 0.7;
@@ -2049,7 +2050,7 @@ let activeNotes = [];
 
 function animateLoop() {
     const now = performance.now();
-    const currentTime = now - startTime;
+    const currentTime = (now - startTime) + audioStartAt;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = 'red';
@@ -2092,7 +2093,7 @@ let sheduleId;
 
 function sheduleTimingsInTimeWindow() {
     const now = performance.now();
-    const currentTime = now - startTime;
+    const currentTime = (now - startTime) + audioStartAt;
 
     notes.forEach(note => {
         //5000мс - 
@@ -2273,5 +2274,37 @@ audio.addEventListener('timeupdate', event => {
 audioProgress.addEventListener('input', event => {
     audio.currentTime = audioProgress.value / 1000 * audio.duration;
 
+    //отчищаю таймеры (отрисовку шкал таймингов, нот, и звучаний нот)
+    clearAllTimeouts();
+
     //
+    playedNotes.clear();
+    playedTimings.clear();
+    activeNotes.length = 0;
+    activeTimings.length = 0;
+
+    //обновляю стартовое время
+    startTime = performance.now();
+    audioStartAt = audio.currentTime * 1000;
+
+    //нужно поместить на игровое поле тайминги и ноты в пределах от текущего времени трека - 1500мс до текущего времени трека + 1500мс
+    notes.forEach(note => {
+        const now = performance.now();
+        const currentTime = (now - startTime) + audioStartAt;
+
+        if (note.delay >= currentTime && note.delay < currentTime + 1500) {
+            activeNotes.push(note);
+            playedNotes.add(note.id);
+
+            const timeout = setTimeout(() => {
+                pop.currentTime = 0;
+                pop.play();
+            }, note.delay - currentTime);
+
+            popTimeouts.push(timeout);
+        }
+    });
+
+    //запускаю планировщик с обновленным startTime
+    sheduleTimingsInTimeWindow();
 });
