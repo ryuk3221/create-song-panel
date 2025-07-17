@@ -2131,7 +2131,7 @@ function sheduleTimingsInTimeWindow() {
         const timeUntilAppear = appearTime - currentTime;
 
         if (timeUntilAppear > 0 && timeUntilAppear <= timeWindow) {
-            if (!playedTimings.has(timing)) {
+            if (!playedTimings.has(timing.timing)) {
                 let color, height;
 
                 if (index % 8 == 0) {
@@ -2148,7 +2148,7 @@ function sheduleTimingsInTimeWindow() {
 
                 const timeOutId = setTimeout(() => {
                     activeTimings.push({ type: 'timing', timing, color, height });
-                    playedTimings.add(timing);
+                    playedTimings.add(timing.timing);
                 }, timeUntilAppear);
 
                 timingsTimeoutsIds.push(timeOutId);
@@ -2292,7 +2292,7 @@ audioProgress.addEventListener('input', event => {
         const now = performance.now();
         const currentTime = (now - startTime) + audioStartAt;
 
-        if (note.delay >= currentTime && note.delay < currentTime + 1500) {
+        if (note.delay >= currentTime && note.delay <= currentTime + 1500) {
             activeNotes.push(note);
             playedNotes.add(note.id);
 
@@ -2304,6 +2304,31 @@ audioProgress.addEventListener('input', event => {
             popTimeouts.push(timeout);
         }
     });
+
+    timings.forEach((timing, index) => {
+        const now = performance.now();
+        const currentTime = (now - startTime) + audioStartAt;
+
+        let color, height;
+
+        if (index % 8 == 0) {
+            color = 'red';
+            height = 60;
+        } else if (index % 4 == 0) {
+            color = 'yellow';
+            height = 40;
+        }
+        else {
+            color = 'blue';
+            height = 20;
+        }
+
+        if (timing >= currentTime && timing <= currentTime + 1500) {
+            activeTimings.push({ type: 'timing', timing, color, height });
+            playedTimings.add(timing);
+        }
+    });
+
 
     //запускаю планировщик с обновленным startTime
     sheduleTimingsInTimeWindow();
