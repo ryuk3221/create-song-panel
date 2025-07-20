@@ -1997,7 +1997,7 @@ const step = 57.6923078;   //в мс
 // const step = 115.384616;
 const step1 = 461.538462;   //в мс
 
-const timings = [];
+let timings = [];
 // const startTiming = 1191;
 const startTiming = 1248;
 
@@ -2010,9 +2010,9 @@ for (let i = startTiming; i <= duration; i += step) {
 const playBtn = document.querySelector('.play');
 const stopBtn = document.querySelector('.stop');
 const audio = document.querySelector('.music');
-audio.volume = 0.4;
+audio.volume = 0.2;
 const pop = document.querySelector('.pop');
-pop.volume = 0.6;
+pop.volume = 0.2;
 
 const canvas = document.querySelector('.canvas-timings');
 const ctx = canvas.getContext('2d');
@@ -2024,7 +2024,7 @@ let startTime = null;
 let audioStartAt = 0;
 const timeWindow = 274535;
 const appearBeforeHitTime = 1500;
-const speed = 0.7;
+let speed = 0.7;
 
 
 //----
@@ -2047,10 +2047,14 @@ let activeNotes = [];
 
 // const playedNotes = new Set();
 
+const noteSize = {
+    width: 24,
+    height: 40
+}
 
 function animateLoop() {
     const now = performance.now();
-    const currentTime = (now - startTime) + audioStartAt;
+    const currentTime = ((now - startTime) + audioStartAt) * (1 / audio.playbackRate);
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = 'red';
@@ -2078,8 +2082,8 @@ function animateLoop() {
             note.x = x;
         }
 
-        ctx.fillStyle = 'rgba(255, 141, 0, 0.7)';
-        ctx.fillRect(note.x - 10, canvas.height - 40, 20, 40);
+        ctx.fillStyle = '#0093c4';
+        ctx.fillRect(note.x - noteSize.width / 2, canvas.height - noteSize.height, noteSize.width, noteSize.height);
     });
 
     activeNotes = activeNotes.filter(note => note.x > 0);
@@ -2093,7 +2097,7 @@ let sheduleId;
 
 function sheduleTimingsInTimeWindow() {
     const now = performance.now();
-    const currentTime = (now - startTime) + audioStartAt;
+    const currentTime = ((now - startTime) + audioStartAt) * (1 / audio.playbackRate);
 
     notes.forEach(note => {
         //5000мс - 
@@ -2131,18 +2135,18 @@ function sheduleTimingsInTimeWindow() {
         const timeUntilAppear = appearTime - currentTime;
 
         if (timeUntilAppear > 0 && timeUntilAppear <= timeWindow) {
-            if (!playedTimings.has(timing.timing)) {
+            if (!playedTimings.has(timing)) {
                 let color, height;
 
                 if (index % 8 == 0) {
                     color = 'red';
                     height = 60;
                 } else if (index % 4 == 0) {
-                    color = 'yellow';
+                    color = '#7700ff';
                     height = 40;
                 }
                 else {
-                    color = 'blue';
+                    color = '#fff';
                     height = 20;
                 }
 
@@ -2186,30 +2190,19 @@ window.addEventListener('keydown', event => {
             audio.pause();
             pauseStartTime = performance.now();
             clearAllTimeouts();
+
             clearTimeout(sheduleId);
+
         } else {
 
             totalPauseDuration = performance.now() - pauseStartTime;
             startTime += totalPauseDuration;
 
-            activeNotes.forEach(note => {
-                const now = performance.now();
-                const currentTime = now - startTime;
-                const timeToPop = note.delay - currentTime;
-
-                if (playedNotes.has(note.id) && timeToPop > 0) {
-                    const popTimeout = setTimeout(() => {
-                        pop.currentTime = 0;
-                        pop.play();
-                    }, note.delay - currentTime);
-                    popTimeouts.push(popTimeout);
-                }
-            });
 
             sheduleTimingsInTimeWindow();
 
             audio.play();
-            console.log("Время паузы: " + totalPauseDuration);
+
         }
     }
 
@@ -2250,14 +2243,25 @@ document.getElementById('0.50').onclick = (event) => {
 
 document.getElementById('0.75').onclick = (event) => {
     const id = event.target.id;
-    audio.playbackRate = parseFloat(id);
-    activeNotes = activeNotes.map(note => {
-        return {
-            id: note.id,
-            column: note.column,
-            delay: note.delay * (1 / audio.playbackRate)
-        }
+    audio.playbackRate = id;
+
+    clearAllTimeouts();
+    playedNotes.clear();
+    playedTimings.clear();
+    activeNotes.length = 0;
+    activeTimings.length = 0;
+
+    speed = speed * audio.playbackRate;
+
+    //обновляю тайминги нот с учетом изменения скорости audio
+    notes.forEach(note => {
+        note.delay = note.delay * (1 / audio.playbackRate);
     });
+
+    timings = timings.map(timing => timing * (1 / audio.playbackRate));
+
+    sheduleTimingsInTimeWindow();
+
 }
 
 document.getElementById('1').onclick = (event) => {
@@ -2290,9 +2294,9 @@ audioProgress.addEventListener('input', event => {
     //нужно поместить на игровое поле тайминги и ноты в пределах от текущего времени трека - 1500мс до текущего времени трека + 1500мс
     notes.forEach(note => {
         const now = performance.now();
-        const currentTime = (now - startTime) + audioStartAt;
+        const currentTime = ((now - startTime) + audioStartAt) * (1 / audio.playbackRate);
 
-        if (note.delay >= currentTime && note.delay <= currentTime + 1500) {
+        if (note.delay >= currentTime - appearBeforeHitTime && note.delay <= currentTime + appearBeforeHitTime) {
             activeNotes.push(note);
             playedNotes.add(note.id);
 
@@ -2307,7 +2311,7 @@ audioProgress.addEventListener('input', event => {
 
     timings.forEach((timing, index) => {
         const now = performance.now();
-        const currentTime = (now - startTime) + audioStartAt;
+        const currentTime = ((now - startTime) + audioStartAt) * (1 / audio.playbackRate);
 
         let color, height;
 
@@ -2315,15 +2319,15 @@ audioProgress.addEventListener('input', event => {
             color = 'red';
             height = 60;
         } else if (index % 4 == 0) {
-            color = 'yellow';
+            color = '#7700ff';
             height = 40;
         }
         else {
-            color = 'blue';
+            color = '#fff';
             height = 20;
         }
 
-        if (timing >= currentTime && timing <= currentTime + 1500) {
+        if (timing >= currentTime - appearBeforeHitTime && timing <= currentTime + appearBeforeHitTime) {
             activeTimings.push({ type: 'timing', timing, color, height });
             playedTimings.add(timing);
         }

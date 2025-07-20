@@ -24,7 +24,32 @@
     }
 
     .audio-progress {
-      width: 1200px;
+      margin-left: 20px;
+    }
+
+    
+    .slider .level {
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      width: 1400px;
+      height: 8px;
+      background: rgb(190, 190, 190);
+      overflow: hidden;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+
+    .slider .level::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 0;
+      height: 0;
+      -webkit-box-shadow: -1000px 0 0 1000px #0093c4;
+      box-shadow: -1000px 0 0 1000px #0093c4;
+    }
+
+    body {
+      background-color: #564a69;
     }
   </style>
 </head>
@@ -32,9 +57,14 @@
   <audio class="music" src="sounds/Mirabi_Frame_feat._Yui_Katsuragi_-_Shokuzai_(SkySound.cc).mp3"></audio>
   <audio class="pop" src="sounds/drum-hitnormal.mp3"></audio>
 
-  <canvas class="canvas-timings" width="1200" height="100">
+  <canvas class="canvas-timings" width="1400" height="100">
 
   </canvas>
+  
+  <!-- <input class="audio-progress" type="range" value="0" max="1000"> -->
+  <label class="slider">
+      <input type="range" class="level audio-progress" value="0" max="1000">
+  </label>
   <div class="buttons">
     <button class="play">play</button>
     <button class="stop">stop</button>
@@ -42,7 +72,6 @@
     <button class="speed-btn" id="0.75">0.75</button>
     <button class="speed-btn" id="1">1.00</button>
   </div>
-  <input class="audio-progress" type="range" value="0" max="1000">
 
   <script src="timings-widget.js">
 
