@@ -1993,12 +1993,11 @@ let notes = [
 
 //----ПЕРЕМЕННЫЕ ГЕНЕРАЦИИ ТАЙМИНГОВ
 let duration = 274535;   //в мс
-const step = 57.6923078;   //в мс
-// const step = 115.384616;
-const step1 = 461.538462;   //в мс
+//Минимальный интервал нот (1/16 нота при BPM = 260)
+const step = 57.6923078;
 
 let timings = [];
-// const startTiming = 1191;
+//Время в мс с которого начинается 
 const startTiming = 1248;
 
 //ГЕНЕРИРУЮ МАССИВ ДОПУСТИМЫХ ТАЙМИНГОВ
@@ -2022,7 +2021,7 @@ const ctx = canvas.getContext('2d');
 //-------
 let startTime = null;
 let audioStartAt = 0;
-const timeWindow = 274535;
+const timeWindow = 3000;
 const appearBeforeHitTime = 1500;
 let speed = 0.7;
 
@@ -2079,11 +2078,11 @@ function animateLoop() {
         if (!isPause) {
             const timeToHit = note.delay - currentTime;
             const x = (canvas.width / 2) + timeToHit * speed;
-            note.x = x;
+            note.x = x - noteSize.width / 2;
         }
 
         ctx.fillStyle = '#0093c4';
-        ctx.fillRect(note.x - noteSize.width / 2, canvas.height - noteSize.height, noteSize.width, noteSize.height);
+        ctx.fillRect(note.x, canvas.height - noteSize.height, noteSize.width, noteSize.height);
     });
 
     activeNotes = activeNotes.filter(note => note.x > 0);
@@ -2109,7 +2108,6 @@ function sheduleTimingsInTimeWindow() {
         // Если нота появится в ближайшие 3 секунды и ещё не была добавлена
         if (timeUntilAppear >= 0 && timeUntilAppear <= timeWindow) {
             if (!playedNotes.has(note.id)) {
-
 
                 const timeOutId = setTimeout(() => {
                     activeNotes.push(note);
@@ -2162,7 +2160,7 @@ function sheduleTimingsInTimeWindow() {
 
     // console.log(activeNotes);
 
-    // sheduleId = setTimeout(() => sheduleTimingsInTimeWindow(), 7000)
+    sheduleId = setTimeout(() => sheduleTimingsInTimeWindow(), 1000)
 }
 
 //-------ЗАПУСК
@@ -2172,12 +2170,6 @@ playBtn.addEventListener('click', () => {
     startTime = performance.now();
     sheduleTimingsInTimeWindow();
     requestAnimationFrame(animateLoop);
-});
-
-
-//-------------КЛИКИ ПО КАНВАСУ ДЛЯ ВЫБОРА НОТЫ
-canvas.addEventListener('click', event => {
-    console.log(event.clientX);
 });
 
 
@@ -2198,6 +2190,19 @@ window.addEventListener('keydown', event => {
             totalPauseDuration = performance.now() - pauseStartTime;
             startTime += totalPauseDuration;
 
+            const now = performance.now();
+            const currentTime = ((now - startTime) + audioStartAt) * (1 / audio.playbackRate);
+
+            activeNotes.forEach(note => {
+                if (note.delay < currentTime + timeWindow && note.delay > currentTime) {
+                    const timeout = setTimeout(() => {
+                        pop.currentTime = 0;
+                        pop.play();
+                    }, note.delay - currentTime);
+
+                    popTimeouts.push(timeout);
+                }
+            });
 
             sheduleTimingsInTimeWindow();
 
@@ -2228,6 +2233,8 @@ function clearAllTimeouts() {
     timingsTimeoutsIds.forEach(timeout => clearTimeout(timeout));
     notesTimeoutsIds.forEach(note => clearTimeout(note));
     popTimeouts.forEach(pop => clearTimeout(pop));
+    
+    clearTimeout(sheduleId);
 
     timingsTimeoutsIds = [];
     notesTimeoutsIds = [];
@@ -2270,9 +2277,17 @@ document.getElementById('1').onclick = (event) => {
 }
 
 const audioProgress = document.querySelector('.audio-progress');
+const audioTextProgress = document.querySelector('.audio-text-progress');
 
 audio.addEventListener('timeupdate', event => {
     audioProgress.value = audio.currentTime / audio.duration * 1000;
+
+    const totalMs = parseFloat(audio.currentTime.toFixed(3) * 1000);
+    const totalSec = parseInt(audio.currentTime);
+    const minutes = Math.floor(totalSec / 60);
+    const seconds = totalSec % 60;
+    let zero = minutes < 10 ? 0 : '';
+    audioTextProgress.innerHTML = `${minutes}:${zero}${seconds}:${totalMs % 1000}`
 });
 
 audioProgress.addEventListener('input', event => {
@@ -2337,3 +2352,24 @@ audioProgress.addEventListener('input', event => {
     //запускаю планировщик с обновленным startTime
     sheduleTimingsInTimeWindow();
 });
+
+//ф-ия которая вызывается по клику на canvas чтобы получить ноту для редактирования ей тайминга
+function getNoteByClick(event) {
+    const canvasCords = canvas.getBoundingClientRect();
+
+    // console.log(canvasCords);
+    // X относительно canvas
+    const clickX = event.clientX - canvasCords.left;
+    console.log(clickX);
+    console.log(activeNotes[0].x);
+    
+    activeNotes.forEach(note => {
+        if (clickX >= note.x && clickX <= note.x + noteSize.width) {
+            console.log('Click on note');
+        }
+    });
+
+    console.log(activeNotes)
+}
+
+canvas.addEventListener('click', getNoteByClick);
