@@ -2009,9 +2009,9 @@ for (let i = startTiming; i <= duration; i += step) {
 const playBtn = document.querySelector('.play');
 const stopBtn = document.querySelector('.stop');
 const audio = document.querySelector('.music');
-audio.volume = 0.2;
+audio.volume = 0.4;
 const pop = document.querySelector('.pop');
-pop.volume = 0.2;
+pop.volume = 0.3;
 
 const canvas = document.querySelector('.canvas-timings');
 const ctx = canvas.getContext('2d');
@@ -2077,8 +2077,8 @@ function animateLoop() {
     activeNotes.forEach(note => {
         if (!isPause) {
             const timeToHit = note.delay - currentTime;
-            const x = (canvas.width / 2) + timeToHit * speed;
-            note.x = x - noteSize.width / 2;
+            const x = (canvas.width / 2 - noteSize.width / 2) + timeToHit * speed;
+            note.x = x;
         }
 
         ctx.fillStyle = '#0093c4';
@@ -2104,6 +2104,10 @@ function sheduleTimingsInTimeWindow() {
         //5000 - 3000мс
         const timeUntilAppear = appearTime - currentTime;
 
+        const findedNote = activeNotes.find(actNote => actNote.id == note.id);
+        if (findedNote) {
+
+        }
 
         // Если нота появится в ближайшие 3 секунды и ещё не была добавлена
         if (timeUntilAppear >= 0 && timeUntilAppear <= timeWindow) {
@@ -2233,7 +2237,7 @@ function clearAllTimeouts() {
     timingsTimeoutsIds.forEach(timeout => clearTimeout(timeout));
     notesTimeoutsIds.forEach(note => clearTimeout(note));
     popTimeouts.forEach(pop => clearTimeout(pop));
-    
+
     clearTimeout(sheduleId);
 
     timingsTimeoutsIds = [];
@@ -2286,7 +2290,7 @@ audio.addEventListener('timeupdate', event => {
     const totalSec = parseInt(audio.currentTime);
     const minutes = Math.floor(totalSec / 60);
     const seconds = totalSec % 60;
-    let zero = minutes < 10 ? 0 : '';
+    let zero = seconds < 10 ? 0 : '';
     audioTextProgress.innerHTML = `${minutes}:${zero}${seconds}:${totalMs % 1000}`
 });
 
@@ -2362,7 +2366,7 @@ function getNoteByClick(event) {
     const clickX = event.clientX - canvasCords.left;
     console.log(clickX);
     console.log(activeNotes[0].x);
-    
+
     activeNotes.forEach(note => {
         if (clickX >= note.x && clickX <= note.x + noteSize.width) {
             console.log('Click on note');
