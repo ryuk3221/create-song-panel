@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,10 +12,11 @@
 
     .canvas-timings {
       display: block;
-      padding:  20px 0px 0px 0px;
+      padding: 20px 0px 0px 0px;
       background-color: #1d1e1f;
       border-radius: 20px;
       margin-bottom: 50px;
+      cursor: pointer;
     }
 
     .buttons {
@@ -35,7 +37,7 @@
       max-width: 1920px;
     }
 
-    
+
     .slider .level {
       -webkit-appearance: none;
       -moz-appearance: none;
@@ -93,15 +95,16 @@
     }
   </style>
 </head>
+
 <body>
   <audio class="music" src="sounds/Mirabi_Frame_feat._Yui_Katsuragi_-_Shokuzai_(SkySound.cc).mp3"></audio>
   <audio class="pop" src="sounds/drum-hitnormal.mp3"></audio>
 
   <div class="wrapper">
     <canvas class="canvas-timings" width="1400" height="100"></canvas>
-    
+
     <label class="slider">
-        <input type="range" class="level audio-progress" value="0" max="1000">
+      <input type="range" class="level audio-progress" value="0" max="1000">
     </label>
     <div class="controls">
       <div class="audio-text-progress">0:00:000</div>
@@ -117,4 +120,5 @@
 
   <script src="timings-widget.js"></script>
 </body>
+
 </html>

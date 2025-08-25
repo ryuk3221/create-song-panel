@@ -2024,6 +2024,7 @@ let audioStartAt = 0;
 const timeWindow = 3000;
 const appearBeforeHitTime = 1500;
 let speed = 0.7;
+let playbackSpeed = 1
 
 
 //----
@@ -2051,127 +2052,125 @@ const noteSize = {
     height: 40
 }
 
+function getAudioMs() {
+    // аудио-время в мс, предсказанное по perf.now() и текущему playbackRate
+    return audioStartAt + (performance.now() - startTime) * audio.playbackRate;
+}
+
+function audioDeltaToReal(delayAudioMs) {
+    // переводим аудио-дельту в реальную задержку таймаута
+    return delayAudioMs / audio.playbackRate;
+}
+
 function animateLoop() {
-    const now = performance.now();
-    const currentTime = ((now - startTime) + audioStartAt) * (1 / audio.playbackRate);
+    const currentTime = getAudioMs(); // ← единственный источник времени
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = 'red';
     ctx.fillRect(canvas.width / 2, 0, 2, canvas.height);
 
-
-    activeTimings.forEach((timingObj, index) => {
+    // TIMINGS
+    activeTimings.forEach((timingObj) => {
         if (!isPause) {
-            const timeToHit = timingObj.timing - currentTime;
+            const timeToHit = timingObj.timing - currentTime; // НИЧЕГО не делим на скорость
             const x = (canvas.width / 2) + timeToHit * speed;
             timingObj.x = x;
         }
-
-
         ctx.fillStyle = timingObj.color;
         ctx.fillRect(timingObj.x, canvas.height - timingObj.height, 2, timingObj.height);
     });
+    // реально фильтруем
+    activeTimings = activeTimings.filter(t => t.x > 0);
 
-    activeTimings.filter(timing => timing.x > 0);
-
+    // NOTES
     activeNotes.forEach(note => {
         if (!isPause) {
-            const timeToHit = note.delay - currentTime;
+            const timeToHit = note.delay - currentTime; // без делений
             const x = (canvas.width / 2 - noteSize.width / 2) + timeToHit * speed;
             note.x = x;
         }
-
         ctx.fillStyle = '#0093c4';
         ctx.fillRect(note.x, canvas.height - noteSize.height, noteSize.width, noteSize.height);
     });
-
-    activeNotes = activeNotes.filter(note => note.x > 0);
-
-
+    activeNotes = activeNotes.filter(n => n.x > 0);
 
     requestAnimationFrame(animateLoop);
 }
 
+
 let sheduleId;
 
 function sheduleTimingsInTimeWindow() {
-    const now = performance.now();
-    const currentTime = ((now - startTime) + audioStartAt) * (1 / audio.playbackRate);
+    const currentTime = getAudioMs(); // аудио-время
 
+    // NOTES
     notes.forEach(note => {
-        //5000мс - 
-        const appearTime = note.delay - appearBeforeHitTime;
-        //5000 - 3000мс
-        const timeUntilAppear = appearTime - currentTime;
+        const appearAudio = note.delay - appearBeforeHitTime; // момент ПОЯВЛЕНИЯ в аудио-мс
+        const deltaAudio = appearAudio - currentTime;         // через сколько по аудио
 
-        const findedNote = activeNotes.find(actNote => actNote.id == note.id);
-        if (findedNote) {
+        // если появится в ближайшие timeWindow аудио-мс
+        if (deltaAudio >= 0 && deltaAudio <= timeWindow && !playedNotes.has(note.id)) {
+            const realDelay = Math.max(0, audioDeltaToReal(deltaAudio));
+            const toId = setTimeout(() => {
+                activeNotes.push(note);
+                playedNotes.add(note.id);
+            }, realDelay);
+            notesTimeoutsIds.push(toId);
 
+            // ЩЕЛЧОК в момент хита
+            const deltaAudioToHit = note.delay - currentTime;
+            const realDelayToHit = Math.max(0, audioDeltaToReal(deltaAudioToHit));
+            const popId = setTimeout(() => { pop.currentTime = 0; pop.play(); }, realDelayToHit);
+            popTimeouts.push(popId);
         }
 
-        // Если нота появится в ближайшие 3 секунды и ещё не была добавлена
-        if (timeUntilAppear >= 0 && timeUntilAppear <= timeWindow) {
-            if (!playedNotes.has(note.id)) {
-
-                const timeOutId = setTimeout(() => {
-                    activeNotes.push(note);
-                    playedNotes.add(note.id);
-                }, timeUntilAppear);
-                notesTimeoutsIds.push(timeOutId);
-
-                //---ЩЕЛЧКИ ДЛЯ ПРОСЛУШИВАНИЯ
-                const timeUntilHit = note.delay - currentTime;
-                const popTimeout = setTimeout(() => {
-                    pop.currentTime = 0;
-                    pop.play();
-                }, timeUntilHit);
-                popTimeouts.push(popTimeout);
-            }
+        // догоняем пропущенные (во время паузы/перемотки), которые уже должны быть на экране
+        if (deltaAudio < 0 && (appearAudio >= currentTime - appearBeforeHitTime) && !playedNotes.has(note.id)) {
+            activeNotes.push(note);
+            playedNotes.add(note.id);
         }
     });
 
+    // TIMINGS
     timings.forEach((timing, index) => {
-        //время когда тайминг должен сработать
-        const appearTime = timing - appearBeforeHitTime;
-        //сколько оссталось времени до этого
-        const timeUntilAppear = appearTime - currentTime;
+        const appearAudio = timing - appearBeforeHitTime;
+        const deltaAudio = appearAudio - currentTime;
 
-        if (timeUntilAppear > 0 && timeUntilAppear <= timeWindow) {
-            if (!playedTimings.has(timing)) {
-                let color, height;
+        if (deltaAudio > 0 && deltaAudio <= timeWindow && !playedTimings.has(timing)) {
+            let color, height;
+            if (index % 8 === 0) { color = 'red'; height = 60; }
+            else if (index % 4 === 0) { color = '#7700ff'; height = 40; }
+            else { color = '#fff'; height = 20; }
 
-                if (index % 8 == 0) {
-                    color = 'red';
-                    height = 60;
-                } else if (index % 4 == 0) {
-                    color = '#7700ff';
-                    height = 40;
-                }
-                else {
-                    color = '#fff';
-                    height = 20;
-                }
+            const realDelay = Math.max(0, audioDeltaToReal(deltaAudio));
+            const toId = setTimeout(() => {
+                activeTimings.push({ type: 'timing', timing, color, height });
+                playedTimings.add(timing); // ← фикс: не timing.timing
+            }, realDelay);
+            timingsTimeoutsIds.push(toId);
+        }
 
-                const timeOutId = setTimeout(() => {
-                    activeTimings.push({ type: 'timing', timing, color, height });
-                    playedTimings.add(timing.timing);
-                }, timeUntilAppear);
-
-                timingsTimeoutsIds.push(timeOutId);
-            }
+        // догоняем пропущенные шкалы
+        if (deltaAudio <= 0 && (appearAudio >= currentTime - appearBeforeHitTime) && !playedTimings.has(timing)) {
+            let color, height;
+            if (index % 8 === 0) { color = 'red'; height = 60; }
+            else if (index % 4 === 0) { color = '#7700ff'; height = 40; }
+            else { color = '#fff'; height = 20; }
+            activeTimings.push({ type: 'timing', timing, color, height });
+            playedTimings.add(timing);
         }
     });
 
-    // console.log(activeNotes);
-
-    sheduleId = setTimeout(() => sheduleTimingsInTimeWindow(), 1000)
+    sheduleId = setTimeout(sheduleTimingsInTimeWindow, 500); // частота проверок — реальное время
 }
+
 
 //-------ЗАПУСК
 playBtn.addEventListener('click', () => {
     audio.currentTime = 0;
     audio.play();
     startTime = performance.now();
+    audioStartAt = audio.currentTime * 1000; // ← ЯВНО
     sheduleTimingsInTimeWindow();
     requestAnimationFrame(animateLoop);
 });
@@ -2181,42 +2180,29 @@ window.addEventListener('keydown', event => {
     if (event.code == 'Escape') {
         isPause = !isPause;
 
-
         if (isPause) {
             audio.pause();
             pauseStartTime = performance.now();
             clearAllTimeouts();
-
+            playedNotes.clear();
             clearTimeout(sheduleId);
-
         } else {
-
             totalPauseDuration = performance.now() - pauseStartTime;
             startTime += totalPauseDuration;
-
             const now = performance.now();
             const currentTime = ((now - startTime) + audioStartAt) * (1 / audio.playbackRate);
-
             activeNotes.forEach(note => {
                 if (note.delay < currentTime + timeWindow && note.delay > currentTime) {
                     const timeout = setTimeout(() => {
-                        pop.currentTime = 0;
-                        pop.play();
+                        pop.currentTime = 0; pop.play();
                     }, note.delay - currentTime);
-
                     popTimeouts.push(timeout);
                 }
             });
-
-            sheduleTimingsInTimeWindow();
-
-            audio.play();
-
+            sheduleTimingsInTimeWindow(); audio.play();
         }
     }
-
 });
-
 
 //узнаю сколько пикселей занимает 1 деление 
 stopBtn.addEventListener('click', event => {
@@ -2247,37 +2233,26 @@ function clearAllTimeouts() {
 
 
 //----кнопки управления скоростью
-document.getElementById('0.50').onclick = (event) => {
-    const id = event.target.id;
-    audio.playbackRate = parseFloat(id);
-}
+window.addEventListener('click', event => {
+    if (event.target.classList.contains('speed-btn')) {
+        const id = event.target.id;
+        updateSpeed(id);
+    }
+})
 
-document.getElementById('0.75').onclick = (event) => {
-    const id = event.target.id;
-    audio.playbackRate = id;
+function updateSpeed(id) {
+    audio.playbackRate = Number(id);
+    // ребейз относительно новой скорости — зафиксировали "сейчас" как опору
+    const nowAudioMs = audio.currentTime * 1000;
+    startTime = performance.now();
+    audioStartAt = nowAudioMs;
 
     clearAllTimeouts();
     playedNotes.clear();
     playedTimings.clear();
-    activeNotes.length = 0;
-    activeTimings.length = 0;
-
-    speed = speed * audio.playbackRate;
-
-    //обновляю тайминги нот с учетом изменения скорости audio
-    notes.forEach(note => {
-        note.delay = note.delay * (1 / audio.playbackRate);
-    });
-
-    timings = timings.map(timing => timing * (1 / audio.playbackRate));
-
+    activeNotes = [];
+    activeTimings = [];
     sheduleTimingsInTimeWindow();
-
-}
-
-document.getElementById('1').onclick = (event) => {
-    const id = event.target.id;
-    audio.playbackRate = Number(id);
 }
 
 const audioProgress = document.querySelector('.audio-progress');
@@ -2312,18 +2287,15 @@ audioProgress.addEventListener('input', event => {
 
     //нужно поместить на игровое поле тайминги и ноты в пределах от текущего времени трека - 1500мс до текущего времени трека + 1500мс
     notes.forEach(note => {
-        const now = performance.now();
-        const currentTime = ((now - startTime) + audioStartAt) * (1 / audio.playbackRate);
+        const currentTime = getAudioMs();
 
         if (note.delay >= currentTime - appearBeforeHitTime && note.delay <= currentTime + appearBeforeHitTime) {
             activeNotes.push(note);
             playedNotes.add(note.id);
 
-            const timeout = setTimeout(() => {
-                pop.currentTime = 0;
-                pop.play();
-            }, note.delay - currentTime);
-
+            const deltaAudioToHit = note.delay - currentTime;
+            const realDelayToHit = Math.max(0, audioDeltaToReal(deltaAudioToHit));
+            const timeout = setTimeout(() => { pop.currentTime = 0; pop.play(); }, realDelayToHit);
             popTimeouts.push(timeout);
         }
     });
@@ -2364,16 +2336,13 @@ function getNoteByClick(event) {
     // console.log(canvasCords);
     // X относительно canvas
     const clickX = event.clientX - canvasCords.left;
-    console.log(clickX);
-    console.log(activeNotes[0].x);
+
 
     activeNotes.forEach(note => {
         if (clickX >= note.x && clickX <= note.x + noteSize.width) {
-            console.log('Click on note');
+            console.log(note);
         }
     });
-
-    console.log(activeNotes)
 }
 
 canvas.addEventListener('click', getNoteByClick);
