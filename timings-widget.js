@@ -2009,9 +2009,9 @@ for (let i = startTiming; i <= duration; i += step) {
 const playBtn = document.querySelector('.play');
 const stopBtn = document.querySelector('.stop');
 const audio = document.querySelector('.music');
-audio.volume = 0.4;
+audio.volume = 0.1;
 const pop = document.querySelector('.pop');
-pop.volume = 0.3;
+pop.volume = 0.1;
 
 const canvas = document.querySelector('.canvas-timings');
 const ctx = canvas.getContext('2d');
@@ -2022,6 +2022,7 @@ const ctx = canvas.getContext('2d');
 let startTime = null;
 let audioStartAt = 0;
 const timeWindow = 3000;
+//на сколько раньше нота должна появиться мс
 const appearBeforeHitTime = 1500;
 let speed = 0.7;
 let playbackSpeed = 1
@@ -2110,10 +2111,12 @@ function sheduleTimingsInTimeWindow() {
 
         // если появится в ближайшие timeWindow аудио-мс
         if (deltaAudio >= 0 && deltaAudio <= timeWindow && !playedNotes.has(note.id)) {
-            const realDelay = Math.max(0, audioDeltaToReal(deltaAudio));
+            const realDelay = audioDeltaToReal(deltaAudio);
+
+            playedNotes.add(note.id);
+
             const toId = setTimeout(() => {
                 activeNotes.push(note);
-                playedNotes.add(note.id);
             }, realDelay);
             notesTimeoutsIds.push(toId);
 
@@ -2142,7 +2145,7 @@ function sheduleTimingsInTimeWindow() {
             else if (index % 4 === 0) { color = '#7700ff'; height = 40; }
             else { color = '#fff'; height = 20; }
 
-            const realDelay = Math.max(0, audioDeltaToReal(deltaAudio));
+            const realDelay = audioDeltaToReal(deltaAudio);
             const toId = setTimeout(() => {
                 activeTimings.push({ type: 'timing', timing, color, height });
                 playedTimings.add(timing); // ← фикс: не timing.timing
@@ -2184,21 +2187,55 @@ window.addEventListener('keydown', event => {
             audio.pause();
             pauseStartTime = performance.now();
             clearAllTimeouts();
-            playedNotes.clear();
-            clearTimeout(sheduleId);
         } else {
+            //фиксирую время пребывания в паузе
             totalPauseDuration = performance.now() - pauseStartTime;
+            //корректирую время, так как аудио в данном случае стартанет не сначала 
             startTime += totalPauseDuration;
-            const now = performance.now();
-            const currentTime = ((now - startTime) + audioStartAt) * (1 / audio.playbackRate);
-            activeNotes.forEach(note => {
-                if (note.delay < currentTime + timeWindow && note.delay > currentTime) {
-                    const timeout = setTimeout(() => {
-                        pop.currentTime = 0; pop.play();
-                    }, note.delay - currentTime);
+
+            playedNotes.clear();
+            playedTimings.clear();
+            activeNotes = [];
+            activeTimings = [];
+
+            const currentTime = getAudioMs();
+
+            //нужно поместить на игровое поле тайминги и ноты в пределах от текущего времени трека - 1500мс до текущего времени трека + 1500мс
+            notes.forEach(note => {
+
+                if (note.delay >= currentTime - appearBeforeHitTime && note.delay <= currentTime + appearBeforeHitTime) {
+                    activeNotes.push(note);
+                    playedNotes.add(note.id);
+
+                    const deltaAudioToHit = note.delay - currentTime;
+                    const realDelayToHit = Math.max(0, audioDeltaToReal(deltaAudioToHit));
+                    const timeout = setTimeout(() => { pop.currentTime = 0; pop.play(); }, realDelayToHit);
                     popTimeouts.push(timeout);
                 }
             });
+
+            timings.forEach((timing, index) => {
+                let color, height;
+
+                if (index % 8 == 0) {
+                    color = 'red';
+                    height = 60;
+                } else if (index % 4 == 0) {
+                    color = '#7700ff';
+                    height = 40;
+                }
+                else {
+                    color = '#fff';
+                    height = 20;
+                }
+
+                if (timing >= currentTime - appearBeforeHitTime && timing <= currentTime + appearBeforeHitTime) {
+                    activeTimings.push({ type: 'timing', timing, color, height });
+                    playedTimings.add(timing);
+                }
+            });
+
+
             sheduleTimingsInTimeWindow(); audio.play();
         }
     }
@@ -2242,16 +2279,20 @@ window.addEventListener('click', event => {
 
 function updateSpeed(id) {
     audio.playbackRate = Number(id);
+    pop.playbackRate = Number(id);
     // ребейз относительно новой скорости — зафиксировали "сейчас" как опору
     const nowAudioMs = audio.currentTime * 1000;
     startTime = performance.now();
     audioStartAt = nowAudioMs;
+
 
     clearAllTimeouts();
     playedNotes.clear();
     playedTimings.clear();
     activeNotes = [];
     activeTimings = [];
+
+
     sheduleTimingsInTimeWindow();
 }
 
@@ -2285,9 +2326,10 @@ audioProgress.addEventListener('input', event => {
     startTime = performance.now();
     audioStartAt = audio.currentTime * 1000;
 
+    const currentTime = getAudioMs();
+
     //нужно поместить на игровое поле тайминги и ноты в пределах от текущего времени трека - 1500мс до текущего времени трека + 1500мс
     notes.forEach(note => {
-        const currentTime = getAudioMs();
 
         if (note.delay >= currentTime - appearBeforeHitTime && note.delay <= currentTime + appearBeforeHitTime) {
             activeNotes.push(note);
@@ -2301,9 +2343,6 @@ audioProgress.addEventListener('input', event => {
     });
 
     timings.forEach((timing, index) => {
-        const now = performance.now();
-        const currentTime = ((now - startTime) + audioStartAt) * (1 / audio.playbackRate);
-
         let color, height;
 
         if (index % 8 == 0) {
